@@ -16,7 +16,7 @@ def generateFunction(functionPrompt):
 # passes given code to ollama to check if its valid
 def validateCode(toWrite):
     print(toWrite + "\n")
-    messageStart = "I want you to validate the following code. A simple yes or no will suffice for whether it is a combilable program (i dont care about logic errors) (no descriptions, preambles, etc)."
+    messageStart = "I want you to validate the following code. Valid code means a fully bodied python function that will run with no issues as is given the neccesary inputs (dont care about logic errors) A simple yes or no will suffice for whether it is a combilable program (i dont care about logic errors) (no descriptions, preambles, etc)."
     
     print("startin\n")
     response = ollama.chat(model='codellama', messages=[{
@@ -27,10 +27,8 @@ def validateCode(toWrite):
     response = response['message']['content']
     print(response)
     
-    if(response[0] == "y" or response[0] == "Y"):
-        print("we good")
+    if("yes" in response or "Yes" in response):
         return True
-    print("something is off")
     return False
 
 
@@ -60,9 +58,5 @@ def writeFunction(functionPrompt, file_path):
         # Write each of the lines to the file
         file.write(toWrite)
 
-            
-        
-            
-            
-writeFunction("write a function to add two numbers", "./functionNames.txt")
+writeFunction("write a function to subtract two numbers", "./functionNames.py")
 
