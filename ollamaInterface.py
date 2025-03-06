@@ -2,8 +2,33 @@ import ollama
 import functionNames
 import importlib
 import sys
+import re
 
 funcName = ""
+
+# load a list of all the currently defined functions in functionNames
+definedFuncs = {}
+
+
+def get_function_names_from_file(file_path):
+    function_names = []
+
+    # Open the file in read mode
+    with open(file_path, "r") as file:
+        lines = file.readlines()
+
+        # Loop through each line and check for function definitions
+        for line in lines:
+            # Use regex to match function definitions (i.e., lines starting with 'def')
+            match = re.match(r"^\s*def\s+(\w+)\s*\(", line)
+            if match:
+                # If it's a match, extract the function name and add it to the list
+                function_names.append(match.group(1))
+
+    return function_names
+
+
+definedFuncs = get_function_names_from_file("./functionNames.py")
 
 
 # generates and returns only the function
@@ -70,6 +95,9 @@ def writeFunction(functionPrompt, file_path):
     end = len(funcName) - 3
     funcName = funcName[0:end]
 
+    definedFuncs.append(funcName)
+    print(definedFuncs)
+
     # Open the file in append mode ('a') to avoid overwriting
     with open(file_path, "a") as file:
         # Write each of the lines to the file
@@ -78,14 +106,14 @@ def writeFunction(functionPrompt, file_path):
 
     print("func Name :: " + funcName)
     loadFunction()
-    print(call_generated_function())
+    print(call_generated_function(5, 2))
 
 
-def loadFunction():
+def loadFunction(name):
     # Load the module dynamically
-    spec = importlib.util.spec_from_file_location(funcName, "./functionNames.py")
+    spec = importlib.util.spec_from_file_location(name, "./functionNames.py")
     generated_method = importlib.util.module_from_spec(spec)
-    sys.modules[funcName] = generated_method
+    sys.modules[name] = generated_method
     spec.loader.exec_module(generated_method)
 
     # Dynamically get the function name from the generated code
@@ -102,7 +130,7 @@ def loadFunction():
     return generated_method, function_name
 
 
-def call_generated_function():
+def call_generated_function(a, b):
     # Load the function and get the function name
     generated_method, function_name = loadFunction()
 
@@ -110,11 +138,55 @@ def call_generated_function():
     dynamic_function = getattr(generated_method, function_name)
 
     # Call the function (with arguments, for example: 5, 3)
-    result = dynamic_function(5, 2)
+    result = dynamic_function(a, b)
     print(f"Result of dynamic function: {result}")
 
 
-writeFunction(
-    "write a function to subtract two numbers",
+# loop through all preexisting functons and ask ollama if it seems appropriate
+def findAppropriateFunction(goal, op1, op2):
+    for func in definedFuncs:
+        messageStart = (
+            "I need a function to accomplish this goal: "
+            + goal
+            + " with the following operands: "
+            + str(op1)
+            + " "
+            + str(op2)
+            + " think about how you would write a function to achieve this goal. Does the following function header seem to line up with your solution? A simple yes or no will suffice"
+        )
+        response = ollama.chat(
+            model="llama3",
+            messages=[
+                {
+                    "role": "user",
+                    "content": messageStart + func,
+                },
+            ],
+            keep_alive=False,
+        )
+        print(response["message"]["content"])
+        response = response["message"]["content"]
+        if "yes" in response or "Yes" in response:
+            return func
+
+    return False
+
+
+def runner(goal, fileLoc):
+    x = 1
+    # check if an appropriate function already exists
+    approprFunc = findAppropriateFunction(goal, 5, 2)
+    if approprFunc == False:
+        print("not found")
+    else:
+        print(approprFunc)
+
+    # if appropriate function doesnt exist, make it
+
+    # run the function and output the results
+
+
+runner(
+    "write a function to divide two numbers",
     "./functionNames.py",
 )
