@@ -105,8 +105,8 @@ def writeFunction(functionPrompt, file_path):
         file.flush
 
     print("func Name :: " + funcName)
-    loadFunction()
-    print(call_generated_function(5, 2))
+    # loadFunction()
+    # print(call_generated_function(5, 2))
 
 
 def loadFunction(name):
@@ -130,9 +130,9 @@ def loadFunction(name):
     return generated_method, function_name
 
 
-def call_generated_function(a, b):
+def call_generated_function(name, a, b):
     # Load the function and get the function name
-    generated_method, function_name = loadFunction()
+    generated_method, function_name = loadFunction(name)
 
     # Get the function object dynamically
     dynamic_function = getattr(generated_method, function_name)
@@ -152,7 +152,7 @@ def findAppropriateFunction(goal, op1, op2):
             + str(op1)
             + " "
             + str(op2)
-            + " think about how you would write a function to achieve this goal. Does the following function header seem to line up with your solution? A simple yes or no will suffice"
+            + " think about how you would write a function to achieve this goal. Does the following function header seem to line up with your solution? A simple yes or no will suffice. Do not count it as a yes if the method would work purely as a quirk or side effect (for example, subtract should not be taken for add)"
         )
         response = ollama.chat(
             model="llama3",
@@ -172,21 +172,22 @@ def findAppropriateFunction(goal, op1, op2):
     return False
 
 
-def runner(goal, fileLoc):
-    x = 1
+def runner(goal, fileLoc, a, b):
     # check if an appropriate function already exists
-    approprFunc = findAppropriateFunction(goal, 5, 2)
-    if approprFunc == False:
+    approprFunc = findAppropriateFunction(goal, a, b)
+    theFunc = 0
+    if approprFunc != False:
         print("not found")
+        theFunc = loadFunction(approprFunc)
     else:
-        print(approprFunc)
+        writeFunction(goal, fileLoc)
+        theFunc = funcName
+
+    call_generated_function(theFunc, a, b)
 
     # if appropriate function doesnt exist, make it
 
     # run the function and output the results
 
 
-runner(
-    "write a function to divide two numbers",
-    "./functionNames.py",
-)
+runner("write a function to subtract two numbers", "./functionNames.py", 5, 3)
